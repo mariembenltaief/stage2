@@ -1,5 +1,14 @@
 const Product = require('../models/produits');
 const Category = require('../models/categories');
+const { Client } = require('pg');
+
+const client = new Client({
+  connectionString: "postgresql://postgres:1234@localhost:5432/mydb"
+});
+
+client.connect()
+  .then(() => console.log("✅ Connexion réussie à PostgreSQL"))
+  .catch(err => console.error("❌ Erreur connexion:", err));
 
 const productController = {
   // Créer un nouveau produit avec upload photo
@@ -52,6 +61,28 @@ const productController = {
     }
   },
 
+  // Récupérer tous les produits avec la catégorie
+  async getAllProductsWithCategory(req, res) {
+    try {
+      const result = await client.query(`
+        SELECT 
+            p.id,
+            p.name AS product_name,
+            p.price,
+            p.photo,
+            c.name AS category_name,
+            c.description AS category_description
+        FROM products p
+        JOIN categories c ON p.category_name = c.name
+        ORDER BY p.name ASC
+      `);
+      res.status(200).json(result.rows);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
   // Récupérer tous les produits
   async getAllProducts(req, res) {
     try {
@@ -96,7 +127,7 @@ const productController = {
     }
   },
 
-  // Mettre à jour
+  // Mettre à jour un produit
   async updateProduct(req, res) {
     try {
       const { id } = req.params;

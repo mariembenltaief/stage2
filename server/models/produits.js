@@ -16,27 +16,44 @@ const Product = {
     if (!category) throw new Error(`La catégorie '${category_name}' n'existe pas`);
 
     const result = await client.query(
-      'INSERT INTO products (name, price, category_name, photo) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, price, category_name, photo]
+      'INSERT INTO products (name, price, category_id, photo) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, price, category.id, photo]
     );
     return result.rows[0];
   },
 
   // Récupérer tous les produits
   async findAll() {
-    const result = await client.query("SELECT * FROM products ORDER BY name ASC");
+    const result = await client.query(
+      `SELECT p.*, c.name AS category_name
+       FROM products p
+       JOIN categories c ON p.category_id = c.id
+       ORDER BY p.name ASC`
+    );
     return result.rows;
   },
 
   // Récupérer un produit par ID
   async findById(id) {
-    const result = await client.query("SELECT * FROM products WHERE id = $1", [id]);
+    const result = await client.query(
+      `SELECT p.*, c.name AS category_name
+       FROM products p
+       JOIN categories c ON p.category_id = c.id
+       WHERE p.id = $1`,
+      [id]
+    );
     return result.rows[0];
   },
 
   // Récupérer un produit par nom
   async findByName(name) {
-    const result = await client.query("SELECT * FROM products WHERE name = $1", [name]);
+    const result = await client.query(
+      `SELECT p.*, c.name AS category_name
+       FROM products p
+       JOIN categories c ON p.category_id = c.id
+       WHERE p.name = $1`,
+      [name]
+    );
     return result.rows[0];
   },
 
@@ -45,22 +62,36 @@ const Product = {
     const existing = await Product.findById(id);
     if (!existing) throw new Error(`Produit ID ${id} introuvable`);
 
+    let categoryId = existing.category_id;
     if (category_name) {
       const category = await Category.findByName(category_name);
       if (!category) throw new Error(`La catégorie '${category_name}' n'existe pas`);
+      categoryId = category.id;
     }
 
     const result = await client.query(
-      "UPDATE products SET name=$1, price=$2, category_name=$3, photo=$4 WHERE id=$5 RETURNING *",
+      "UPDATE products SET name=$1, price=$2, category_id=$3, photo=$4 WHERE id=$5 RETURNING *",
       [
         name || existing.name,
         price !== undefined ? price : existing.price,
-        category_name || existing.category_name,
+        categoryId,
         photo !== undefined ? photo : existing.photo,
         id
       ]
     );
     return result.rows[0];
+  },
+
+  // Récupérer les produits par catégorie
+  async findByCategory(category_id) {
+    const result = await client.query(
+      `SELECT p.*, c.name AS category_name
+       FROM products p
+       JOIN categories c ON p.category_id = c.id
+       WHERE category_id = $1`,
+      [category_id]
+    );
+    return result.rows;
   },
 
   // Supprimer un produit
