@@ -5,6 +5,16 @@ const cors = require('cors');
 const path = require('path');
 const productController = require('./controllers/produitsControllers');
 const categoriesController = require('./controllers/categoriesController');
+const { Client } = require('pg'); // importer PostgreSQL
+
+const client = new Client({
+  connectionString: 'postgresql://postgres:1234@localhost:5432/mydb' // à adapter
+});
+
+client.connect()
+  .then(() => console.log("✅ Connexion à PostgreSQL réussie"))
+  .catch(err => console.error("❌ Erreur connexion:", err));
+
 
 app.use(express.json());
 app.use(cors());
@@ -16,6 +26,8 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
 const upload = multer({ storage });
+
+// Créer un utilisateur
 app.post('/users', upload.single('photo'), async (req, res) => {
   const { name, email, password } = req.body;
   const photo = req.file ? req.file.filename : null;
@@ -32,6 +44,18 @@ app.post('/users', upload.single('photo'), async (req, res) => {
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
+
+// Récupérer tous les utilisateurs
+app.get('/users', async (req, res) => {
+  try {
+    const result = await client.query('SELECT id, name, email, photo FROM users');
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Erreur SQL:", err);
+    res.status(500).json({ error: "Erreur serveur lors de la récupération des utilisateurs" });
+  }
+});
+
 
 console.log("🚀 ~ password1:")
 app.get("/get",async (req,res) => { 
@@ -52,6 +76,7 @@ app.post('/Login', async (req, res) => {
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
+
 // Routes catégories
 app.post("/categories", categoriesController.createCategory);
 app.get("/categories", categoriesController.getAllCategories);
@@ -66,4 +91,4 @@ app.get('/produit/:id', productController.getProductById);
 app.put('/produit/:id', upload.single('photo'), productController.updateProduct);
 app.delete('/produit/:id', productController.deleteProduct);
 
-app.listen(3001, () => console.log('Server running on http://localhost:4000'));
+app.listen(3001, () => console.log('Server running on http://localhost:3001'));

@@ -15,7 +15,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const res = await fetch("http://localhost:4000/admins");
+        const res = await fetch("http://localhost:3001/users");
         const data = await res.json();
         setAdmins(data);
       } catch (err) {
@@ -26,7 +26,7 @@ const Dashboard: React.FC = () => {
   }, []);
 
   const getPhotoUrl = (photo: string | null) =>
-    photo ? `http://localhost:4000/uploads/${photo}` : "/no-image.png";
+    photo ? `http://localhost:3001/uploads/${photo}` : "/no-image.png";
 
   return (
     <Layout>
@@ -50,7 +50,8 @@ const Dashboard: React.FC = () => {
               image={getPhotoUrl(admin.photo)}
               alt="Admin"
               sx={{ objectFit: "contain", cursor: "pointer" }} // ← curseur main
-              onClick={() => navigate("/produits")} // ← navigation
+              onClick={() => navigate(`/produits?userId=${admin.id}`)}
+ // ← navigation
               onError={(e: any) => (e.target.src = "/no-image.png")}
             />
           </Card>

@@ -13,7 +13,7 @@ const Product = {
   async create(name, price, id_categorie, photo, id_user) {
     const result = await client.query(
       `INSERT INTO products (name, price, id_categorie, photo, id_user)
-       VALUES ($1, $2, $3, $4,$5) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [name, price, id_categorie, photo, id_user]
     );
     return result.rows[0];
@@ -21,18 +21,29 @@ const Product = {
 
   async findAll() {
     const result = await client.query(
-      `SELECT p.id, p.name, p.price, p.photo, p.category_name
-       FROM products p
-       ORDER BY p.id ASC`
+      `SELECT 
+         id_produit AS id,
+         name,
+         price,
+         photo,
+         id_categorie,
+         id_user
+       FROM products`
     );
     return result.rows;
   },
 
   async findById(id) {
     const result = await client.query(
-      `SELECT p.id, p.name, p.price, p.photo, p.category_name
-       FROM products p
-       WHERE p.id = $1`,
+      `SELECT 
+         id_produit AS id,
+         name,
+         price,
+         photo,
+         id_categorie,
+         id_user
+       FROM products
+       WHERE id_produit = $1`,
       [id]
     );
     return result.rows[0];
@@ -40,25 +51,34 @@ const Product = {
 
   async findByName(name) {
     const result = await client.query(
-      `SELECT * FROM products WHERE name = $1`,
+      `SELECT 
+         id_produit AS id,
+         name,
+         price,
+         photo,
+         id_categorie,
+         id_user
+       FROM products
+       WHERE name = $1`,
       [name]
     );
     return result.rows[0];
   },
 
-  async update(id, name, price, category_name, photo) {
+  async update(id, name, price, id_categorie, photo) {
     const result = await client.query(
       `UPDATE products
-       SET name=$1, price=$2, category_name=$3, photo=$4
-       WHERE id=$5 RETURNING *`,
-      [name, price, category_name, photo, id]
+       SET name=$1, price=$2, id_categorie=$3, photo=$4
+       WHERE id_produit=$5
+       RETURNING *`,
+      [name, price, id_categorie, photo, id]
     );
     return result.rows[0];
   },
 
   async delete(id) {
     const result = await client.query(
-      `DELETE FROM products WHERE id=$1 RETURNING *`,
+      `DELETE FROM products WHERE id_produit=$1 RETURNING *`,
       [id]
     );
     return result.rows[0];

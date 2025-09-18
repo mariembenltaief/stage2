@@ -1,9 +1,10 @@
-// src/pages/Produits.tsx  (ou ton emplacement actuel)
+// src/pages/Produits.tsx
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { cartActions } from "../store/CartSlice";
 import type { RootState } from "../store/store";
 import Layout from "../components/Layout";
+import { useLocation } from "react-router-dom";
 
 import {
   Grid,
@@ -14,6 +15,13 @@ import {
   Button,
   Alert,
   CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
 
 interface Product {
@@ -22,6 +30,8 @@ interface Product {
   price: number;
   description?: string;
   photo?: string;
+  category_name?: string;
+  category_description?: string;
   quantity?: number;
 }
 
@@ -32,31 +42,34 @@ const Produits: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const totalAmount = cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const userId = params.get("userId"); // récupère l’ID admin
+
+  // Calcul du total du panier
+  const totalAmount = cartItems.reduce(
+    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+    0
+  );
+
+  // Vider le panier à chaque changement de userId/admin
+  useEffect(() => {
+    dispatch(cartActions.clearCart());
+  }, [userId, dispatch]);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const res = await fetch("http://localhost:4000/produit");
-        const data = await res.json();
-        console.log("fetch /produit status", res.status, data);
+        let url = "http://localhost:3001/produit";
+        if (userId) url += `?userId=${userId}`; // filtrer par admin
 
-        // Gestion robuste des formats de réponse
-        if (Array.isArray(data)) {
-          setProducts(data);
-          setErrorMsg(null);
-        } else if (Array.isArray(data.products)) {
-          setProducts(data.products);
-          setErrorMsg(null);
-        } else if (Array.isArray(data.produits)) {
-          setProducts(data.produits);
-          setErrorMsg(null);
-        } else if (data.success && Array.isArray(data.data)) {
-          setProducts(data.data);
-          setErrorMsg(null);
-        } else {
-          // format inattendu ou erreur renvoyée par le backend
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (Array.isArray(data)) setProducts(data);
+        else if (data.success && Array.isArray(data.data)) setProducts(data.data);
+        else {
           console.error("Format de réponse inattendu:", data);
           setProducts([]);
           setErrorMsg("Réponse backend inattendue (voir console).");
@@ -71,7 +84,7 @@ const Produits: React.FC = () => {
     };
 
     fetchProducts();
-  }, []);
+  }, [userId]);
 
   const addToCart = (product: Product) => {
     dispatch(cartActions.addToCart({ ...product, quantity: 1 }));
@@ -101,31 +114,58 @@ const Produits: React.FC = () => {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      {/* Grid Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         {products.map((p) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={p.id}>
-            <Card sx={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <Card
+              sx={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
               {p.photo ? (
                 <CardMedia
                   component="img"
                   height="200"
-                  image={`http://localhost:4000/uploads/${p.photo}`}
+                  image={`http://localhost:3001/uploads/${p.photo}`}
                   alt={p.name}
                   sx={{ objectFit: "cover" }}
                 />
               ) : (
-                <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5" }}>
+                <div
+                  style={{
+                    height: 200,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#f5f5f5",
+                  }}
+                >
                   <Typography variant="subtitle1">Pas d'image</Typography>
                 </div>
               )}
 
               <CardContent>
                 <Typography variant="h6">{p.name}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ minHeight: 48 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ minHeight: 48 }}
+                >
                   {p.description || "Pas de description disponible."}
                 </Typography>
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: 12,
+                  }}
+                >
                   <Typography variant="h6">{p.price}$</Typography>
                   <Button variant="contained" onClick={() => addToCart(p)}>
                     Add to Cart
@@ -137,17 +177,33 @@ const Produits: React.FC = () => {
         ))}
       </Grid>
 
-      {/* debugging utile si toujours rien */}
-      {!loading && (
-        <details style={{ marginTop: 16 }}>
-          <summary>Voir réponse brute (console aussi)</summary>
-          <pre>{JSON.stringify(products, null, 2)}</pre>
-        </details>
+      {/* Tableau des produits avec catégories */}
+      {!loading && products.length > 0 && (
+        <TableContainer component={Paper} sx={{ mb: 4 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Nom Produit</TableCell>
+                <TableCell>Prix ($)</TableCell>
+                <TableCell>Catégorie</TableCell>
+                <TableCell>Description Catégorie</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {products.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>{p.name}</TableCell>
+                  <TableCell>{p.price}</TableCell>
+                  <TableCell>{p.category_name || "-"}</TableCell>
+                  <TableCell>{p.category_description || "-"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
-      <Typography variant="h6" sx={{ mt: 4 }}>
-        Total panier: ${totalAmount}
-      </Typography>
+      <Typography variant="h6">Total panier: ${totalAmount}</Typography>
     </Layout>
   );
 };
