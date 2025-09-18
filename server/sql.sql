@@ -1,10 +1,16 @@
-ALTER TABLE users ADD COLUMN photo TEXT;
-CREATE TABLE categories (
-    name VARCHAR  NOT NULL,
-    description VARCHAR(255)
+create table categories (
+   id_categorie serial primary key,
+   name         varchar not null,
+   description  varchar(255),
+   id           serial
+      references users ( id )
 );
-CREATE TABLE brands (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    logo VARCHAR(255) 
-);
+create table products (
+   id_produit   serial primary key,
+   name         varchar not null,
+   price        varchar(250),
+   photo        varchar(255),
+   id_categorie serial
+      references categories ( id_categorie ),
+   id_user      varchar(255)
+)
