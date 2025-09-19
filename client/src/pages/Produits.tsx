@@ -203,7 +203,7 @@ const Produits: React.FC = () => {
         </TableContainer>
       )}
 
-      <Typography variant="h6">Total panier: ${totalAmount}</Typography>
+      
     </Layout>
   );
 };
